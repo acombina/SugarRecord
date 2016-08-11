@@ -8,7 +8,7 @@ public extension CoreData {
         case Merged([NSBundle]?)
         case URL(NSURL)
         
-        func model() -> NSManagedObjectModel? {
+        public func model() -> NSManagedObjectModel? {
             switch self {
             case .Merged(let bundles):
                 return NSManagedObjectModel.mergedModelFromBundles(bundles)

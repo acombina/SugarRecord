@@ -19,7 +19,7 @@ public class CoreDataDefaultStorage: Storage {
             return "CoreDataDefaultStorage"
         }
     }
-    
+    var dbType: String = NSSQLiteStoreType
     public var type: StorageType = .CoreData
     public var mainContext: Context!
     private var _saveContext: Context!
@@ -84,16 +84,31 @@ public class CoreDataDefaultStorage: Storage {
     
     
     // MARK: - Init
-    
-    public convenience init(store: CoreData.Store, model: CoreData.ObjectModel, migrate: Bool = true) throws {
-        try self.init(store: store, model: model, migrate: migrate, versionController: VersionController())
+  
+    public convenience init(store: CoreData.Store, model: CoreData.ObjectModel, coordinator: NSPersistentStoreCoordinator, persistentStore: NSPersistentStore?, migrate: Bool = true) throws {
+        try self.init(store: store, model: model, coordinator: coordinator,  persistentStore: persistentStore, migrate: migrate, versionController: VersionController())
+    }
+  
+    public convenience init(store: CoreData.Store, model: CoreData.ObjectModel, type: String, migrate: Bool = true) throws {
+        try self.init(store: store, model: model, coordinator: nil,  migrate: migrate, versionController: VersionController())
     }
     
-    internal init(store: CoreData.Store, model: CoreData.ObjectModel, migrate: Bool = true, versionController: VersionController) throws {
+    internal init(store: CoreData.Store, model: CoreData.ObjectModel, coordinator: NSPersistentStoreCoordinator?, persistentStore: NSPersistentStore? = nil,  migrate: Bool = true, versionController: VersionController) throws {
         self.store   = store
         self.objectModel = model.model()!
-        self.persistentStoreCoordinator = NSPersistentStoreCoordinator(managedObjectModel: objectModel)
-        self.persistentStore = try cdInitializeStore(store, storeCoordinator: persistentStoreCoordinator, migrate: migrate)
+    
+        if let coordinator = coordinator {
+          self.persistentStoreCoordinator = coordinator
+        } else {
+          self.persistentStoreCoordinator = NSPersistentStoreCoordinator(managedObjectModel: objectModel)
+        }
+    
+        if let persistentStore = persistentStore {
+          self.persistentStore = persistentStore
+        } else {
+          self.persistentStore = try cdInitializeStore(store, storeCoordinator: persistentStoreCoordinator, migrate: migrate)
+        }
+    
         self.rootSavingContext = cdContext(withParent: .Coordinator(self.persistentStoreCoordinator), concurrencyType: .PrivateQueueConcurrencyType, inMemory: false)
         self.mainContext = cdContext(withParent: .Context(self.rootSavingContext), concurrencyType: .MainQueueConcurrencyType, inMemory: false)
         versionController.check()
